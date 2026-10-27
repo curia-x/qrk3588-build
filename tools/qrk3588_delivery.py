@@ -123,7 +123,18 @@ def finish(args):
     exclusions = [Path(path) for path in state["exclusions"]]
     current = {name: source_identity(source["path"], exclusions) for name, source in state["sources"].items()}
     if current != state["sources"]:
-        raise ValueError("source tree changed during the build; staged artifacts are not published")
+        differences = []
+        for name, before in state["sources"].items():
+            after = current[name]
+            if before == after:
+                continue
+            fields = [field for field in ("head", "submodules") if before[field] != after[field]]
+            old = {item["path"]: item for item in before["changes"]}
+            new = {item["path"]: item for item in after["changes"]}
+            paths = sorted(path for path in old.keys() | new.keys() if old.get(path) != new.get(path))
+            differences.append(f"{name}: " + ", ".join(fields + paths))
+        raise ValueError("source tree changed during the build; staged artifacts are not published\n"
+                         + "\n".join(differences))
     if read_inputs([(name, item["path"]) for name, item in state["inputs"].items()]) != state["inputs"]:
         raise ValueError("input image changed during the build; staged artifacts are not published")
     public = {name: public_key_identity(path) for name, path in state["key_references"].items()}

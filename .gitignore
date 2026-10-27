@@ -1,1 +1,4 @@
 /out
+# Python runtime caches are generated build outputs.
+__pycache__/
+*.pyc
